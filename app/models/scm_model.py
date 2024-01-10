@@ -6,13 +6,22 @@ class User(BaseModel):
     username: str
     email: str
     password: str
-    phone:str
-    role:str='user'
-class UserInDB(User):
+    phone: str
+    role: str = 'user'
+    _id: Optional[str] = None 
+
+
+class UserInDB(BaseModel):
+    username: str
+    email: str
+    password: str
+    phone: str
+    role: str = 'user'
     _id: Optional[str] = None
-    
+
+
 class Shipment(BaseModel):
-    email:str
+    email: str
     ShipmentNumber: int
     RouteDetails: str
     Device: str
@@ -25,3 +34,10 @@ class Shipment(BaseModel):
     DeliveryNumber: str
     BatchId: str
     ShipmentDescription: str
+class DeviceData(BaseModel):
+    Device_ID: int
+    Battery_Level: float
+    First_Sensor_temperature: float
+    Route_From: str
+    Route_To: str
+  
