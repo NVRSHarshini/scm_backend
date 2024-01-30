@@ -33,8 +33,8 @@ while connected:
                 routeto = random.choice(route)
                 if (routefrom!=routeto):
                     data = {
-                        "Device_ID": random.randint(1156053076,1156053077),
-                        "Battery_Level":round(random.uniform(2.00,5.00),2),
+                        "Device_ID": random.randint(956053076,956053077),
+                        "Battery_Level":round(random.uniform(6.00,8.00),2),
                         "First_Sensor_temperature":round(random.uniform(10,40.0),1),
                         "Route_From":routefrom,
                         "Route_To":routeto

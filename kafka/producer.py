@@ -15,21 +15,26 @@ producer_config = {
 }
 producer = Producer(producer_config)
 
-while True:
-    try:
-        message = server.recv(1024).decode('utf-8')
-        producer.produce(os.getenv("topic"), key="key", value=message)
-      
-    except socket.timeout:
-        print("No messages received in the last 10 seconds.")
-    except ConnectionResetError:
-        print("Connection reset by peer.")
-        break
+try:
+    while True:
+        try:
+            message = server.recv(1024).decode('utf-8')
+            print(f"Received message: {message}")
+            producer.produce(os.getenv("topic"), key="key", value=message)
+            print("Message produced to Kafka")
+        except socket.timeout:
+            print("No messages received in the last 10 seconds.")
+        except ConnectionResetError:
+            print("Connection reset by peer.")
+            break
 
+except KeyboardInterrupt:
+    # Handle keyboard interrupt gracefully
+    pass
+finally:
+    # Wait for any outstanding messages to be delivered and delivery reports received
+    producer.flush()
 
-# Wait for any outstanding messages to be delivered and delivery reports received
-producer.flush()
-
-# Close the producer
-producer.close()
-server.close()
+    # Close the producer and socket
+    producer.close()
+    server.close()
