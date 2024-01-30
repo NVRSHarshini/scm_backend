@@ -1,23 +1,25 @@
 from datetime import timedelta
-from typing import List,Optional
-from fastapi import APIRouter,  HTTPException, Depends
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-# from models.scm_model import User
-from ..data.scm_dbutils import get_current_user, get_user_by_email, pwd_context,authenticate_user,create_access_token,ACCESS_TOKEN_EXPIRE_MINUTES
-from ..data.scm_db import Ship_collection, user_cltn,device_collection
-from ..models.scm_model import DeviceData, User,UserInDB
-from ..models import scm_model  
-router=APIRouter()
+
+# Import necessary modules and models
+from ..data.scm_dbutils import get_current_user, get_user_by_email, pwd_context, authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from ..data.scm_db import Ship_collection, user_cltn, device_collection
+from ..models.scm_model import DeviceData, User, UserInDB
+from ..models import scm_model
+
+# ....................Create an instance of APIRouter...........
+router = APIRouter()
 
 
+# .....................Root route....................
 @router.get("/")
 async def root():
-    return {"message":"don't give up!"}
+    return {"message": "don't give up!"}
 
 
-
-
-
+#............................ User registration route..................................................
 @router.post("/registration", response_model=scm_model.UserInDB)
 async def create_user(user: scm_model.User):
     existing_user = await user_cltn.find_one({"email": user.email})
@@ -34,25 +36,26 @@ async def create_user(user: scm_model.User):
     return user
 
 
+# ...................................User login route.......................................................
 @router.post("/login")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Generate an access token for the user
     access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
     access_token = create_access_token(
-        data={"sub": user['username'], "email": user['email'],"role": user['role']},  
+        data={"sub": user['username'], "email": user['email'], "role": user['role']},
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-
+#...................................... User profile route....................................................
 @router.get("/profile/{email}", response_model=dict)
 async def profile(email: str, current_user: dict = Depends(get_current_user)):
     # Check if the logged-in user's email matches the requested profile email
-    print(email)
-    
     if current_user["email"] != email:
         raise HTTPException(status_code=403, detail="You are not authorized to access this profile")
 
@@ -64,16 +67,12 @@ async def profile(email: str, current_user: dict = Depends(get_current_user)):
     user["_id"] = str(user["_id"])
     return user
 
-
-# Protected route to create a shipment
+# ...............................Create shipment route............................................................
 @router.post("/create_shipment/", response_model=scm_model.Shipment)
-async def create_shipment(
-    shipment: scm_model.Shipment,
-    current_user: dict = Depends(get_current_user)
-):
+async def create_shipment(shipment: scm_model.Shipment, current_user: dict = Depends(get_current_user)):
     try:
-        print(current_user,",",shipment.email)
-        if not current_user and current_user["email"]!=shipment.email:
+        print(current_user, ",", shipment.email)
+        if not current_user or current_user["email"] != shipment.email:
             raise HTTPException(status_code=401, detail="Not authenticated")
       
         existing_shipment = await Ship_collection.find_one({"ShipmentNumber": shipment.ShipmentNumber})
@@ -89,9 +88,7 @@ async def create_shipment(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
-# Protected route to get shipments by email
+# .........................Get shipments route.....................................................
 @router.get("/ship/{email}")
 async def read_shipment(email: str, current_user: dict = Depends(get_current_user)):
     if current_user['role'] == 'admin':
@@ -111,9 +108,9 @@ async def read_shipment(email: str, current_user: dict = Depends(get_current_use
             shipment["_id"] = str(shipment["_id"])
         return user_shipments
     
-    
     raise HTTPException(status_code=404, detail="No shipments found for this email")
 
+# ...............................Get all devices route.........................................................
 @router.get("/deviceData", response_model=List[DeviceData])
 async def get_all_devices(current_user: dict = Depends(get_current_user)):
     try:
@@ -126,6 +123,7 @@ async def get_all_devices(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Get devices by DeviceId route
 @router.get("/deviceData/{DeviceId}", response_model=List[DeviceData])
 async def get_devices(DeviceId: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     try:
@@ -133,10 +131,13 @@ async def get_devices(DeviceId: Optional[str] = None, current_user: dict = Depen
             raise HTTPException(status_code=401, detail="Unauthorized")
 
         if DeviceId:
-            device = await device_collection.find_one({"Device_ID": int(DeviceId)})
-            if not device:
-                raise HTTPException(status_code=404, detail="Device not found")
-            return [device]
+            # Find all devices that match the specified DeviceId
+            devices = await device_collection.find({"Device_ID": int(DeviceId)}).to_list(length=None)
+            
+            if not devices:
+                raise HTTPException(status_code=404, detail="No devices found for the given DeviceId")
+            
+            return devices
 
         # Return all devices when DeviceId is not provided
         devices = await device_collection.find({}).to_list(length=None)

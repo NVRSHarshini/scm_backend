@@ -43,7 +43,6 @@ def verify_password(plain_password, hashed_password):
 
 # Function to authenticate user
 async def authenticate_user(email: str, password: str):
-    print("entered auth user")
     user = await user_cltn.find_one({"email": email})
     if not user or not verify_password(password, user.get('hashed_password')):
         return False
